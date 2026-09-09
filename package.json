@@ -1,0 +1,26 @@
+{
+  "name": "mcp-chat-bridge",
+  "version": "1.0.0",
+  "description": "Expose a local MCP stdio server (e.g. filesystem) to ChatGPT Chat / Custom GPT Actions via Streamable HTTP gateway + temporary Cloudflare tunnel, or a REST+OpenAPI bridge",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "chatgpt",
+    "filesystem",
+    "cloudflare-tunnel",
+    "supergateway"
+  ],
+  "scripts": {
+    "start": "bash scripts/start.sh",
+    "stop": "bash scripts/stop.sh",
+    "bridge": "node src/server.mjs"
+  },
+  "bin": {
+    "mcp-chat-bridge": "./src/server.mjs"
+  }
+}
