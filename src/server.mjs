@@ -12,16 +12,31 @@
 
 import http from 'node:http';
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// ---------- load .env (repo root) so one .env configures both modes ----------
+const ENV_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '.env');
+if (fs.existsSync(ENV_FILE)) {
+  for (const line of fs.readFileSync(ENV_FILE, 'utf8').split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+    if (!m) continue;
+    // .env wins: host shells can pre-export vars like PORT=0 that must not override config.
+    // Keep the raw value (quotes included) so ROOTS/MCP_COMMAND quoting survives to parseCommand.
+    process.env[m[1]] = m[2];
+  }
+}
 
 // ---------- config ----------
-const PORT = Number(process.env.PORT || 8792);
-const TOKEN = process.env.BRIDGE_TOKEN || ''; // empty = refuse to start (safety)
+const unquote = (s) => String(s).replace(/^"|"$/g, '');
+const PORT = Number(unquote(process.env.PORT) || 8792);
+const TOKEN = unquote(process.env.BRIDGE_TOKEN || ''); // empty = refuse to start (safety)
 const HOST = '127.0.0.1';
 const BODY_LIMIT = 5 * 1024 * 1024; // 5MB
 
 // Command that launches the MCP stdio server. Default: official filesystem server.
 const MCP_COMMAND = process.env.MCP_COMMAND || 'npx -y @modelcontextprotocol/server-filesystem';
-const ROOTS = (process.env.ROOTS || process.cwd()).split(/\s+/).filter(Boolean);
 
 function parseCommand(command) {
   // Supports quotes:  npx -y pkg "arg with spaces"
@@ -29,8 +44,14 @@ function parseCommand(command) {
   return matches.map((part) => part.replace(/^"|"$/g, ''));
 }
 
+// ROOTS may contain quoted paths (e.g. "C:\My Folder\proj") so reuse parseCommand
+const ROOTS = process.env.ROOTS ? parseCommand(process.env.ROOTS) : [process.cwd()];
+
 const [FS_BIN, ...FS_ARGS_BASE] = parseCommand(MCP_COMMAND);
-const FS_ARGS = [...FS_ARGS_BASE, ...ROOTS];
+// cmd.exe (shell mode) does not auto-quote args with spaces — quote them explicitly
+const FS_ARGS = [...FS_ARGS_BASE, ...ROOTS].map((a) =>
+  a.includes(' ') && !a.startsWith('"') ? `"${a}"` : a,
+);
 
 if (!TOKEN) {
   console.error('[bridge] FATAL: BRIDGE_TOKEN must be set before running (generate one: openssl rand -hex 32)');

@@ -19,6 +19,13 @@ for PORT in "$GATEWAY_PORT" 8792; do
       echo "  - gateway on port $PORT stopped"
     fi
   fi
+  # Windows/Git Bash fallback: pkill -f often can't match MSYS processes, so
+  # kill whatever is actually LISTENING on the gateway ports.
+  if command -v netstat >/dev/null 2>&1 && command -v taskkill >/dev/null 2>&1; then
+    for PID in $(netstat -ano | grep ":$PORT " | grep LISTENING | awk '{print $NF}' | sort -u); do
+      taskkill //F //PID "$PID" >/dev/null 2>&1 && echo "  - gateway on port $PORT stopped"
+    done
+  fi
 done
 
 # Windows (Git Bash) fallback: kill by image name

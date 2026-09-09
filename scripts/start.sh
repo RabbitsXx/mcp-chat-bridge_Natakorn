@@ -30,6 +30,12 @@ MCP_COMMAND="${MCP_COMMAND:-npx -y @modelcontextprotocol/server-filesystem}"
 GATEWAY_PORT="${GATEWAY_PORT:-8791}"
 NODE_BIN="${NODE_BIN:-node}"
 CLOUDFLARED_BIN="${CLOUDFLARED_BIN:-cloudflared}"
+# Prefer a repo-local cloudflared binary (bin/cloudflared.exe) when present — no global install needed
+if [ -z "$CLOUDFLARED_BIN" ] || [ "$CLOUDFLARED_BIN" = "cloudflared" ]; then
+  if [ -f "$REPO_DIR/bin/cloudflared.exe" ]; then
+    CLOUDFLARED_BIN="$REPO_DIR/bin/cloudflared.exe"
+  fi
+fi
 STATE_DIR="${STATE_DIR:-$HOME/.mcp-chat-bridge}"
 
 mkdir -p "$STATE_DIR"
@@ -41,12 +47,23 @@ bash "$SCRIPT_DIR/stop.sh" >/dev/null 2>&1 || true
 sleep 1
 
 echo "[2/3] Starting MCP gateway (stdio -> Streamable HTTP at localhost:$GATEWAY_PORT)..."
+# Quote ROOTS as a single argument so paths with spaces (e.g. "D:\My Folder\proj") survive
+# the shell re-parse inside supergateway. NOTE: ROOTS is treated as ONE directory here;
+# for multiple space-separated roots, keep each path space-free.
+STDIO_CMD="$MCP_COMMAND \"$ROOTS\""
 MSYS_NO_PATHCONV=1 nohup npx --yes supergateway@latest \
-  --stdio "$MCP_COMMAND $ROOTS" \
+  --stdio "$STDIO_CMD" \
   --outputTransport streamableHttp \
   --port "$GATEWAY_PORT" \
   --streamableHttpPath /mcp \
   --logLevel info > "$GATEWAY_LOG" 2>&1 < /dev/null &
+
+# Give npx/npm first-run downloads time to finish before the readiness probe below
+for _ in $(seq 1 15); do
+  if (echo > "/dev/tcp/127.0.0.1/$GATEWAY_PORT") >/dev/null 2>&1; then break; fi
+  sleep 1
+done
+
 disown
 sleep 4
 
