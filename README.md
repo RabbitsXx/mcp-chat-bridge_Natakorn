@@ -1,4 +1,4 @@
-# mcp-chat-bridge
+# mcp-chat-bridge_Natakorn
 
 ให้ AI แชต (เช่น ChatGPT Chat / Custom GPT Actions) เข้าถึง **MCP server แบบ stdio บนเครื่องคุณ** ผ่านอินเทอร์เน็ตชั่วคราว — ใช้กับ MCP server ตัวไหนก็ได้ (filesystem, git, sqlite, …) และ reuse ได้ทุกโปรเจคโดยแก้แค่ config
 

@@ -1,5 +1,5 @@
 {
-  "name": "mcp-chat-bridge",
+  "name": "mcp-chat-bridge_natakorn",
   "version": "1.0.0",
   "description": "Expose a local MCP stdio server (e.g. filesystem) to ChatGPT Chat / Custom GPT Actions via Streamable HTTP gateway + temporary Cloudflare tunnel, or a REST+OpenAPI bridge",
   "license": "MIT",
